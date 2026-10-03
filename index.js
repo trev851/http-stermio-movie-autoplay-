@@ -35,6 +35,11 @@ const manifest = {
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 
+console.log('TMDB_API_KEY is set:', !!TMDB_API_KEY);
+if (!TMDB_API_KEY) {
+  console.warn('WARNING: TMDB_API_KEY environment variable is not set!');
+}
+
 const catalogDefinitions = {
   'franchise-collection': {
     type: 'collection',
@@ -138,13 +143,17 @@ async function tmdbFetch(path, params = {}) {
     }
   });
 
+  console.log(`TMDB request: ${url.toString().replace(TMDB_API_KEY, 'XXX')}`);
   const res = await fetch(url.toString());
   if (!res.ok) {
     const text = await res.text();
+    console.error(`TMDB request failed for ${path}: ${res.status} ${text}`);
     throw new Error(`TMDB request failed for ${path}: ${res.status} ${text}`);
   }
 
-  return res.json();
+  const json = await res.json();
+  console.log(`TMDB response for ${path}:`, json.results ? `${json.results.length} results` : 'no results');
+  return json;
 }
 
 function movieToMeta(movie) {
@@ -235,14 +244,25 @@ async function discoverMovies(config) {
 }
 
 builder.defineCatalogHandler(async ({ type, id }) => {
-  if (type !== 'movie') return { metas: [] };
+  console.log(`Catalog request: type=${type}, id=${id}`);
+  if (type !== 'movie') {
+    console.log('Catalog request type is not movie, returning empty');
+    return { metas: [] };
+  }
 
   const config = catalogDefinitions[id];
-  if (!config) return { metas: [] };
+  if (!config) {
+    console.log(`Catalog ${id} not found in definitions`);
+    return { metas: [] };
+  }
 
   try {
+    console.log(`Discovering movies for catalog ${id}...`);
     const movies = await discoverMovies(config);
-    return { metas: movies.slice(0, 30).map(movieToMeta) };
+    console.log(`Discovered ${movies.length} movies for catalog ${id}`);
+    const metas = movies.slice(0, 30).map(movieToMeta);
+    console.log(`Returning ${metas.length} metas for catalog ${id}`);
+    return { metas };
   } catch (err) {
     console.error(`Catalog handler failed for ${id}:`, err);
     return { metas: [] };
