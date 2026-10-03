@@ -11,6 +11,7 @@ const fetch = (() => {
 })();
 
 const express = require('express');
+const { serveHTTP } = require('stremio-addon-sdk');
 const { addonBuilder } = require('stremio-addon-sdk');
 
 const manifest = {
@@ -321,21 +322,10 @@ builder.defineStreamHandler(async (args) => {
   }
 });
 
-// Create Express app and attach the addon interface
-const app = express();
-const addonInterface = builder.getInterface();
-app.use(addonInterface);
-
-// Add error handler
-app.use((err, req, res, next) => {
-  console.error('App error:', err);
-  res.status(500).json({ error: 'Internal server error' });
-});
-
-// Start the server
+// Use serveHTTP to start the addon server properly
 const port = process.env.PORT || 7000;
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Addon running on http://0.0.0.0:${port}/manifest.json`);
-});
+serveHTTP(builder, { port, host: '0.0.0.0' });
+
+console.log(`Addon running on http://0.0.0.0:${port}/manifest.json`);
 
 module.exports = { manifest, catalogDefinitions, movieToMeta };
