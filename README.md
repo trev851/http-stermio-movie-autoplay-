@@ -13,14 +13,41 @@ This repository contains a Stremio HTTP addon that:
   - actress collection
   - comedy, drama, action, and kids movies
 
-How it works
+## Manifest
+
+The addon exposes the following manifest configuration:
+
+```json
+{
+  "id": "org.trev851.movie.autoplay",
+  "version": "1.1.0",
+  "name": "Stremio Movie Autoplay (TMDB meta + catalogs)",
+  "description": "Movie metadata, autoplay streams, and curated TMDB movie catalogs for franchise, genre, actor, actress, and director collections.",
+  "resources": ["catalog", "meta", "stream"],
+  "types": ["movie"],
+  "idPrefixes": ["tmdb"],
+  "catalogs": [
+    { "type": "movie", "id": "franchise-collection", "name": "Franchise Collection" },
+    { "type": "movie", "id": "final-destination-collection", "name": "Final Destination Collection" },
+    { "type": "movie", "id": "director-collection", "name": "Director Collection" },
+    { "type": "movie", "id": "actor-collection", "name": "Actor Collection" },
+    { "type": "movie", "id": "actress-collection", "name": "Actress Collection" },
+    { "type": "movie", "id": "comedy", "name": "Comedy Movies" },
+    { "type": "movie", "id": "drama", "name": "Drama Movies" },
+    { "type": "movie", "id": "action", "name": "Action Movies" },
+    { "type": "movie", "id": "kids", "name": "Kids Movies" }
+  ]
+}
+```
+
+## How it works
 
 - The addon exposes the `catalog`, `meta`, and `stream` resources for `movie` content.
 - Catalogs are powered by TMDB discover/collection endpoints and curated TMDB IDs.
 - Movie metadata is loaded by direct TMDB movie lookup using a numeric TMDB ID.
 - Streams are resolved from `streams.json` first, then the TMDB video endpoint, then a YouTube trailer fallback.
 
-Setup locally
+## Setup locally
 
 1. Set the TMDB API key:
 
@@ -38,7 +65,7 @@ Setup locally
 
    http://YOUR_HOST:7000/manifest.json
 
-Render deployment
+## Render deployment
 
 1. Create a Web Service on Render using this GitHub repo.
 2. Use the default Node environment.
@@ -62,8 +89,9 @@ Render deployment
 
 8. If you want to use a custom domain such as `https://pengu.uk/manifest.json`, add it in Render under Settings > Custom Domains.
 
-Example `streams.json` mapping:
+## Example `streams.json` mapping:
 
+```json
 {
   "138843": [
     {
@@ -80,8 +108,9 @@ Example `streams.json` mapping:
     }
   ]
 }
+```
 
-Available catalogs
+## Available catalogs
 
 - franchise-collection
 - final-destination-collection
@@ -93,13 +122,13 @@ Available catalogs
 - action
 - kids
 
-Notes
+## Notes
 
 - For real movie autoplay, you still need playable URLs in `streams.json`.
 - The trailer fallback only returns preview trailers, not the full movie.
 - The TMDB API key should stay private and should be stored in an environment variable.
 
-Final Destination collection metadata
+## Final Destination collection metadata
 
 - TMDB collection ID: 8864
 - Main films in the franchise include:
