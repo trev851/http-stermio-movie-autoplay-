@@ -10,6 +10,7 @@ const fetch = (() => {
   }
 })();
 
+const express = require('express');
 const { addonBuilder } = require('stremio-addon-sdk');
 
 const manifest = {
@@ -320,18 +321,20 @@ builder.defineStreamHandler(async (args) => {
   }
 });
 
-const http = require('http');
-const addon = builder.getInterface();
+// Create Express app and attach the addon interface
+const app = express();
+const addonInterface = builder.getInterface();
+app.use(addonInterface);
 
-const server = http.createServer((req, res) => {
-  addon(req, res, () => {
-    res.writeHead(404);
-    res.end('Not found');
-  });
+// Add error handler
+app.use((err, req, res, next) => {
+  console.error('App error:', err);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
+// Start the server
 const port = process.env.PORT || 7000;
-server.listen(port, '0.0.0.0', () => {
+app.listen(port, '0.0.0.0', () => {
   console.log(`Addon running on http://0.0.0.0:${port}/manifest.json`);
 });
 
