@@ -1,20 +1,3 @@
-const stremioSdk = (() => {
-  try {
-    return require('stremio-addon-sdk');
-  } catch (e) {
-    console.error('Failed to require stremio-addon-sdk:', e.message);
-    throw e;
-  }
-})();
-
-// stremio-addon-sdk v1.0.0 exports addonBuilder as default or direct export
-const addonBuilderFactory = stremioSdk.addonBuilder || stremioSdk.default || stremioSdk;
-
-if (!addonBuilderFactory) {
-  console.error('Could not find addonBuilder in stremio-addon-sdk. Export shape:', Object.keys(stremioSdk));
-  throw new Error('Incompatible stremio-addon-sdk version or failed import.');
-}
-
 const fetch = (() => {
   try {
     // node-fetch v2
@@ -26,6 +9,43 @@ const fetch = (() => {
     throw e;
   }
 })();
+
+// Import the stremio SDK with better debugging
+let stremioSdk;
+let addonBuilderFactory;
+
+try {
+  stremioSdk = require('stremio-addon-sdk');
+  console.log('stremio-addon-sdk loaded. Type:', typeof stremioSdk);
+  console.log('stremio-addon-sdk keys:', Object.keys(stremioSdk || {}));
+  
+  // Try different export patterns
+  if (typeof stremioSdk === 'function') {
+    // Direct function export (new StremioAddonBuilder())
+    addonBuilderFactory = stremioSdk;
+    console.log('Using direct function export');
+  } else if (stremioSdk.addonBuilder) {
+    // Named export
+    addonBuilderFactory = stremioSdk.addonBuilder;
+    console.log('Using stremioSdk.addonBuilder');
+  } else if (stremioSdk.default) {
+    // ESM default export fallback
+    if (typeof stremioSdk.default === 'function') {
+      addonBuilderFactory = stremioSdk.default;
+      console.log('Using stremioSdk.default (function)');
+    } else if (stremioSdk.default.addonBuilder) {
+      addonBuilderFactory = stremioSdk.default.addonBuilder;
+      console.log('Using stremioSdk.default.addonBuilder');
+    }
+  }
+  
+  if (!addonBuilderFactory) {
+    throw new Error('Could not determine addonBuilder export shape');
+  }
+} catch (e) {
+  console.error('Fatal: Failed to load stremio-addon-sdk:', e.message);
+  process.exit(1);
+}
 
 const manifest = {
   id: "org.trev851.movie.autoplay",
