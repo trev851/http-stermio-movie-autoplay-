@@ -35,8 +35,6 @@ const manifest = {
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 
-console.log('TMDB_API_KEY is set:', !!TMDB_API_KEY);
-
 const catalogDefinitions = {
   'franchise-collection': {
     type: 'collection',
@@ -322,34 +320,8 @@ builder.defineStreamHandler(async (args) => {
   }
 });
 
-const http = require('http');
-const app = builder.getInterface();
-
-const server = http.createServer((req, res) => {
-  console.log(`${req.method} ${req.url}`);
-  
-  // Handle CORS and manifest requests
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    res.writeHead(200);
-    res.end();
-    return;
-  }
-
-  // Delegate to addon interface
-  app(req, res);
-});
-
+const server = require('http').createServer(builder.getInterface());
 const port = process.env.PORT || 7000;
-server.listen(port, '0.0.0.0', () => {
-  console.log(`Addon running on http://0.0.0.0:${port}/manifest.json`);
-});
-
-server.on('error', (err) => {
-  console.error('Server error:', err);
-});
+server.listen(port, '0.0.0.0', () => console.log(`Addon running on http://0.0.0.0:${port}/manifest.json`));
 
 module.exports = { manifest, catalogDefinitions, movieToMeta };
