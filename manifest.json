@@ -1,0 +1,20 @@
+{
+  "id": "org.trev851.movie.autoplay",
+  "version": "1.1.0",
+  "name": "Stremio Movie Autoplay (TMDB meta + catalogs)",
+  "description": "Movie metadata, autoplay streams, and curated TMDB movie catalogs for franchise, genre, actor, actress, and director collections.",
+  "resources": ["catalog", "meta", "stream"],
+  "types": ["movie"],
+  "idPrefixes": ["tmdb"],
+  "catalogs": [
+    { "type": "movie", "id": "franchise-collection", "name": "Franchise Collection" },
+    { "type": "movie", "id": "final-destination-collection", "name": "Final Destination Collection" },
+    { "type": "movie", "id": "director-collection", "name": "Director Collection" },
+    { "type": "movie", "id": "actor-collection", "name": "Actor Collection" },
+    { "type": "movie", "id": "actress-collection", "name": "Actress Collection" },
+    { "type": "movie", "id": "comedy", "name": "Comedy Movies" },
+    { "type": "movie", "id": "drama", "name": "Drama Movies" },
+    { "type": "movie", "id": "action", "name": "Action Movies" },
+    { "type": "movie", "id": "kids", "name": "Kids Movies" }
+  ]
+}
