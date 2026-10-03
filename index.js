@@ -320,8 +320,19 @@ builder.defineStreamHandler(async (args) => {
   }
 });
 
-const server = require('http').createServer(builder.getInterface());
+const http = require('http');
+const addon = builder.getInterface();
+
+const server = http.createServer((req, res) => {
+  addon(req, res, () => {
+    res.writeHead(404);
+    res.end('Not found');
+  });
+});
+
 const port = process.env.PORT || 7000;
-server.listen(port, '0.0.0.0', () => console.log(`Addon running on http://0.0.0.0:${port}/manifest.json`));
+server.listen(port, '0.0.0.0', () => {
+  console.log(`Addon running on http://0.0.0.0:${port}/manifest.json`);
+});
 
 module.exports = { manifest, catalogDefinitions, movieToMeta };
