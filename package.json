@@ -1,0 +1,13 @@
+{
+  "name": "stremio-movie-autoplay",
+  "version": "1.0.0",
+  "description": "Stremio addon: metadata from TMDB and autoplay streams from a mapping or TMDB YouTube trailers.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "stremio-addon-sdk": "^1.0.0",
+    "node-fetch": "2"
+  }
+}
