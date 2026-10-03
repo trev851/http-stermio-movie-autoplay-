@@ -87,7 +87,7 @@ The addon exposes the following manifest configuration:
 
 7. Add that exact URL to Stremio.
 
-8. If you want to use a custom domain such as `https://pengu.uk/manifest.json`, add it in Render under Settings > Custom Domains.
+8. If you want to use a custom domain such as 
 
 ## Example `streams.json` mapping:
 
