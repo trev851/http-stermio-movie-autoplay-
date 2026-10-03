@@ -1,329 +1,118 @@
-const { addonBuilder } = require("stremio-addon-sdk");
-const fetch = require("node-fetch");
+# Stremio Movie Autoplay Addon
 
-const manifest = {
-  id: "org.trev851.movie.autoplay",
-  version: "1.1.0",
-  name: "Stremio Movie Autoplay (TMDB meta + catalogs)",
-  description: "Movie metadata, autoplay streams, and curated TMDB movie catalogs for franchise, genre, actor, actress, and director collections.",
-  resources: ["catalog", "meta", "stream"],
-  types: ["movie"],
-  idPrefixes: ["tmdb"],
-  catalogs: [
-    { type: "movie", id: "franchise-collection", name: "Franchise Collection" },
-    { type: "movie", id: "final-destination-collection", name: "Final Destination Collection" },
-    { type: "movie", id: "director-collection", name: "Director Collection" },
-    { type: "movie", id: "actor-collection", name: "Actor Collection" },
-    { type: "movie", id: "actress-collection", name: "Actress Collection" },
-    { type: "movie", id: "comedy", name: "Comedy Movies" },
-    { type: "movie", id: "drama", name: "Drama Movies" },
-    { type: "movie", id: "action", name: "Action Movies" },
-    { type: "movie", id: "kids", name: "Kids Movies" },
+This repository contains a Stremio HTTP addon that:
+
+- returns TMDB movie metadata from a TMDB movie ID
+- returns autoplay streams from a local streams.json mapping
+- falls back to YouTube TMDB trailers if no stream mapping exists
+- includes curated movie catalogs for:
+  - franchise collection
+  - Final Destination collection
+  - director collection
+  - actor collection
+  - actress collection
+  - comedy, drama, action, and kids movies
+
+How it works
+
+- The addon exposes the `catalog`, `meta`, and `stream` resources for `movie` content.
+- Catalogs are powered by TMDB discover/collection endpoints and curated TMDB IDs.
+- Movie metadata is loaded by direct TMDB movie lookup using a numeric TMDB ID.
+- Streams are resolved from `streams.json` first, then the TMDB video endpoint, then a YouTube trailer fallback.
+
+Setup locally
+
+1. Set the TMDB API key:
+
+   export TMDB_API_KEY=your_api_key
+
+2. Install dependencies:
+
+   npm install
+
+3. Start the addon:
+
+   npm start
+
+4. Add the addon in Stremio using the manifest URL:
+
+   http://YOUR_HOST:7000/manifest.json
+
+Render deployment
+
+1. Create a Web Service on Render using this GitHub repo.
+2. Use the default Node environment.
+3. Set the build command:
+
+   npm install
+
+4. Set the start command:
+
+   npm start
+
+5. Add the environment variable:
+
+   TMDB_API_KEY=your_tmdb_api_key
+
+6. Render will expose a URL like:
+
+   https://http-stermio-movie-autoplay.onrender.com/manifest.json
+
+7. Add that exact URL to Stremio.
+
+8. If you want to use a custom domain such as `https://pengu.uk/manifest.json`, add it in Render under Settings > Custom Domains.
+
+Example `streams.json` mapping:
+
+{
+  "138843": [
+    {
+      "url": "https://cdn.example.com/movies/138843/master.m3u8",
+      "title": "The Conjuring 1080p",
+      "isFree": true
+    }
   ],
-};
-
-const TMDB_API_KEY = process.env.TMDB_API_KEY;
-
-const catalogDefinitions = {
-  "franchise-collection": {
-    type: "collection",
-    name: "Franchise Collection",
-    items: [
-      { name: "Marvel Cinematic Universe", id: 86311 },
-      { name: "Star Wars", id: 10 },
-      { name: "The Conjuring", id: 402 },
-      { name: "Final Destination", id: 8864 },
-      { name: "Harry Potter", id: 1241 },
-      { name: "Jurassic Park", id: 328 },
-      { name: "Transformers", id: 8650 },
-      { name: "Toy Story", id: 10194 },
-      { name: "Despicable Me", id: 86066 },
-      { name: "Fast & Furious", id: 9485 },
-      { name: "Batman", id: 120794 },
-      { name: "The Lord of the Rings", id: 123 },
-      { name: "Planet of the Apes", id: 417 },
-    ],
-  },
-  "final-destination-collection": {
-    type: "collection",
-    name: "Final Destination Collection",
-    items: [
-      { name: "Final Destination", id: 8864 },
-    ],
-  },
-  "director-collection": {
-    type: "person",
-    kind: "crew",
-    name: "Director Collection",
-    items: [
-      { name: "Christopher Nolan", id: 525 },
-      { name: "Steven Spielberg", id: 488 },
-      { name: "James Cameron", id: 2710 },
-      { name: "Martin Scorsese", id: 1032 },
-      { name: "Peter Jackson", id: 108 },
-      { name: "Denis Villeneuve", id: 137427 },
-      { name: "Ridley Scott", id: 78 },
-      { name: "Quentin Tarantino", id: 138 },
-      { name: "Tim Burton", id: 510 },
-    ],
-  },
-  "actor-collection": {
-    type: "person",
-    kind: "cast",
-    name: "Actor Collection",
-    items: [
-      { name: "Tom Hanks", id: 31 },
-      { name: "Leonardo DiCaprio", id: 6193 },
-      { name: "Dwayne Johnson", id: 18918 },
-      { name: "Brad Pitt", id: 287 },
-      { name: "Matt Damon", id: 1269 },
-      { name: "Tom Cruise", id: 500 },
-      { name: "Ryan Reynolds", id: 10859 },
-      { name: "Will Smith", id: 2888 },
-      { name: "Keanu Reeves", id: 6384 },
-      { name: "Vin Diesel", id: 12835 },
-    ],
-  },
-  "actress-collection": {
-    type: "person",
-    kind: "cast",
-    name: "Actress Collection",
-    items: [
-      { name: "Meryl Streep", id: 5064 },
-      { name: "Cate Blanchett", id: 112 },
-      { name: "Julia Roberts", id: 1204 },
-      { name: "Sandra Bullock", id: 1827 },
-      { name: "Angelina Jolie", id: 11701 },
-      { name: "Emma Stone", id: 54693 },
-      { name: "Scarlett Johansson", id: 1245 },
-      { name: "Margot Robbie", id: 234352 },
-      { name: "Viola Davis", id: 2245 },
-      { name: "Natalie Portman", id: 524 },
-    ],
-  },
-  comedy: { type: "genre", genre: 35, name: "Comedy Movies" },
-  drama: { type: "genre", genre: 18, name: "Drama Movies" },
-  action: { type: "genre", genre: 28, name: "Action Movies" },
-  kids: { type: "genre", genre: 10751, name: "Kids Movies" },
-};
-
-const builder = new addonBuilder(manifest);
-
-function parseTmdbId(rawId) {
-  if (!rawId) return null;
-  const id = String(rawId).trim();
-  const parts = id.split(":");
-  return parts[parts.length - 1] || null;
+  "953": [
+    {
+      "url": "https://cdn.example.com/movies/953/master.m3u8",
+      "title": "Final Destination 1080p",
+      "isFree": true
+    }
+  ]
 }
 
-async function tmdbFetch(path, params = {}) {
-  if (!TMDB_API_KEY) {
-    throw new Error("TMDB_API_KEY is not set");
-  }
+Available catalogs
 
-  const url = new URL(`https://api.themoviedb.org/3/${path}`);
-  url.searchParams.set("api_key", TMDB_API_KEY);
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
-      url.searchParams.set(key, value);
-    }
-  });
+- franchise-collection
+- final-destination-collection
+- director-collection
+- actor-collection
+- actress-collection
+- comedy
+- drama
+- action
+- kids
 
-  const res = await fetch(url.toString());
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`TMDB request failed for ${path}: ${res.status} ${text}`);
-  }
-  return res.json();
-}
+Notes
 
-function movieToMeta(movie) {
-  const title = movie.title || movie.original_title || movie.name || movie.original_name || "Untitled";
-  const year = movie.release_date || movie.first_air_date || "";
-  return {
-    id: `tmdb:${movie.id}`,
-    type: "movie",
-    name: title,
-    poster: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined,
-    background: movie.backdrop_path ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}` : undefined,
-    releaseInfo: year ? year.slice(0, 4) : undefined,
-    description: movie.overview || undefined,
-    genres: movie.genres ? movie.genres.map((g) => g.name) : movie.genre_ids || [],
-    meta: {
-      tmdb_id: String(movie.id),
-    },
-  };
-}
+- For real movie autoplay, you still need playable URLs in `streams.json`.
+- The trailer fallback only returns preview trailers, not the full movie.
+- The TMDB API key should stay private and should be stored in an environment variable.
 
-async function discoverMovies(config) {
-  if (!config) return [];
+Final Destination collection metadata
 
-  if (config.type === "genre") {
-    const data = await tmdbFetch("discover/movie", {
-      language: "en-US",
-      sort_by: "popularity.desc",
-      include_adult: false,
-      include_video: false,
-      with_genres: config.genre,
-      page: 1,
-    });
-    return data.results || [];
-  }
+- TMDB collection ID: 8864
+- Main films in the franchise include:
+  - Final Destination (953)
+  - Final Destination 2 (1006)
+  - Final Destination 3 (11817)
+  - The Final Destination (19912)
+  - Final Destination 5 (55779)
+  - Final Destination: Bloodlines (1226264)
 
-  if (config.type === "person") {
-    const paramName = config.kind === "crew" ? "with_crew" : "with_cast";
-    const allMovies = await Promise.all(
-      config.items.map(async (person) => {
-        const data = await tmdbFetch("discover/movie", {
-          language: "en-US",
-          sort_by: "popularity.desc",
-          include_adult: false,
-          [paramName]: person.id,
-          page: 1,
-        });
-        return data.results || [];
-      })
-    );
+If you want, I can next:
 
-    const merged = [];
-    const seen = new Set();
-    for (const movieList of allMovies) {
-      for (const movie of movieList) {
-        if (!movie || !movie.id || seen.has(movie.id)) continue;
-        seen.add(movie.id);
-        merged.push(movie);
-      }
-    }
-    return merged;
-  }
-
-  if (config.type === "collection") {
-    const allParts = await Promise.all(
-      config.items.map(async (item) => {
-        try {
-          const data = await tmdbFetch(`collection/${item.id}`, { language: "en-US" });
-          return data.parts || [];
-        } catch (err) {
-          console.warn(`Failed to fetch collection ${item.name} (${item.id}):`, err.message);
-          return [];
-        }
-      })
-    );
-
-    const merged = [];
-    const seen = new Set();
-    for (const list of allParts) {
-      for (const movie of list) {
-        if (!movie || !movie.id || seen.has(movie.id)) continue;
-        seen.add(movie.id);
-        merged.push(movie);
-      }
-    }
-    return merged;
-  }
-
-  return [];
-}
-
-builder.defineCatalogHandler(async ({ type, id }) => {
-  if (type !== "movie") {
-    return { metas: [] };
-  }
-
-  const config = catalogDefinitions[id];
-  if (!config) {
-    return { metas: [] };
-  }
-
-  try {
-    const movies = await discoverMovies(config);
-    return { metas: movies.slice(0, 30).map(movieToMeta) };
-  } catch (err) {
-    console.error(`Catalog handler failed for ${id}:`, err);
-    return { metas: [] };
-  }
-});
-
-builder.defineMeta(async (args) => {
-  try {
-    const tmdbId = parseTmdbId(args.id);
-    if (!tmdbId) {
-      return { metas: [] };
-    }
-
-    const data = await tmdbFetch(`movie/${tmdbId}`, {
-      language: "en-US",
-      append_to_response: "images,credits,videos",
-    });
-
-    const meta = {
-      id: `tmdb:${tmdbId}`,
-      type: "movie",
-      name: data.original_title || data.title || "Untitled",
-      poster: data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : undefined,
-      background: data.backdrop_path ? `https://image.tmdb.org/t/p/original${data.backdrop_path}` : undefined,
-      releaseInfo: data.release_date ? data.release_date.slice(0, 4) : undefined,
-      imdb_id: data.imdb_id ? `imdb:${data.imdb_id}` : undefined,
-      description: data.overview || undefined,
-      genres: data.genres ? data.genres.map((g) => g.name) : [],
-      meta: { tmdb_id: String(tmdbId) },
-    };
-
-    return { metas: [meta] };
-  } catch (err) {
-    console.error("Meta fetch failed:", err);
-    return { metas: [] };
-  }
-});
-
-builder.defineStream(async (args) => {
-  try {
-    const tmdbId = parseTmdbId(args.id);
-    if (!tmdbId) {
-      return { streams: [] };
-    }
-
-    let mapping = {};
-    try {
-      mapping = require("./streams.json");
-    } catch (e) {
-      mapping = {};
-    }
-
-    if (mapping[tmdbId] && Array.isArray(mapping[tmdbId]) && mapping[tmdbId].length) {
-      return {
-        streams: mapping[tmdbId].map((s) => ({
-          title: s.title || "Autoplay Stream",
-          url: s.url,
-          isFree: s.isFree !== false,
-        })),
-      };
-    }
-
-    const data = await tmdbFetch(`movie/${tmdbId}/videos`, { language: "en-US" });
-    const videos = data.results || [];
-    const yt = videos.find((v) => v.site === "YouTube" && (v.type === "Trailer" || v.type === "Teaser" || v.type === "Clip"));
-
-    if (!yt) {
-      return { streams: [] };
-    }
-
-    return {
-      streams: [{
-        title: `${yt.type || "Trailer"} (YouTube)`,
-        url: `https://www.youtube.com/watch?v=${yt.key}`,
-        isFree: true,
-      }],
-    };
-  } catch (err) {
-    console.error("Stream fetch failed:", err);
-    return { streams: [] };
-  }
-});
-
-const server = require("http").createServer(builder.getInterface());
-const port = process.env.PORT || 7000;
-server.listen(port, () => console.log(`Addon running on http://localhost:${port}/manifest.json`));
-
-module.exports = { manifest, catalogDefinitions, movieToMeta };
-
+- expand the catalog with more actors/directors/franchises
+- add a small admin API to update stream mappings without editing the file manually
+- help deploy the addon on a public host
+- add genre and collection filters by year or rating
