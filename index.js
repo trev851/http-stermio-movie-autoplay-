@@ -10,9 +10,7 @@ const fetch = (() => {
   }
 })();
 
-const express = require('express');
-const { serveHTTP } = require('stremio-addon-sdk');
-const { addonBuilder } = require('stremio-addon-sdk');
+const { serveHTTP, addonBuilder } = require('stremio-addon-sdk');
 
 const manifest = {
   id: 'org.trev851.movie.autoplay',
@@ -322,9 +320,11 @@ builder.defineStreamHandler(async (args) => {
   }
 });
 
-// Use serveHTTP to start the addon server properly
+// Build the addon interface and serve it
+const addon = builder.getInterface();
 const port = process.env.PORT || 7000;
-serveHTTP(builder, { port, host: '0.0.0.0' });
+
+serveHTTP(addon, { port, host: '0.0.0.0' });
 
 console.log(`Addon running on http://0.0.0.0:${port}/manifest.json`);
 
