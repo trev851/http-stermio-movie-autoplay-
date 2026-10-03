@@ -7,8 +7,8 @@ const stremioSdk = (() => {
   }
 })();
 
-// Support different export shapes across versions (CommonJS / ESM interop)
-const addonBuilderFactory = stremioSdk.addonBuilder || (stremioSdk.default && stremioSdk.default.addonBuilder) || stremioSdk;
+// stremio-addon-sdk v1.0.0 exports addonBuilder as default or direct export
+const addonBuilderFactory = stremioSdk.addonBuilder || stremioSdk.default || stremioSdk;
 
 if (!addonBuilderFactory) {
   console.error('Could not find addonBuilder in stremio-addon-sdk. Export shape:', Object.keys(stremioSdk));
